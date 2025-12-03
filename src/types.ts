@@ -1,14 +1,18 @@
-export interface PageData {
-  title: string;
-  url: string;
-  description?: string;
-  content?: string;
+export interface CrawlResult{
+  url : string;
+  links : string[];
+
 }
 
 
 
 
-
+/*export interface PageData {
+  title: string;
+  url: string;
+  description?: string;
+  content?: string;
+}*/
 //export type SitemapData = Record<string, string>;
 
 //export interface ScrapeResult {

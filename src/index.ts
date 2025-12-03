@@ -4,7 +4,8 @@ const baseUrl = process.argv[2] || "https://www.missoun.com/";
 
 (async () => {
   console.log(`Inizio crawling da: ${baseUrl}`);
-  await crawl(baseUrl, 2); // limite di 2 pagine
+  const links = await crawl(baseUrl, 1); // limite di 1 paggina
+  console.log('Trovati ${links.length} link totali')
   console.log("Crawling completato");
 })();
 
