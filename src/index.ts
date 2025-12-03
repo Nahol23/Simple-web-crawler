@@ -1,6 +1,6 @@
 import { crawl } from "./crawler";
 
-const baseUrl = process.argv[2] || "https://www.missoun.com/";
+const baseUrl = process.argv[2] || "https://www.mediaworld.it/";
 const limit = parseInt(process.argv[3] || "2");
 
 (async () => {

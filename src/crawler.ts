@@ -11,7 +11,10 @@ function getBaseDomain(url: string): string {
   }
 }
 
-export async function crawl(baseUrl: string, options: CrawlOptions = {}): Promise<DomainCrawlResult> {
+export async function crawl(
+  baseUrl: string,
+  options: CrawlOptions = {}
+): Promise<DomainCrawlResult> {
   const { limit = 5, saveToFile = true } = options;
 
   const visited = new Set<string>();
@@ -32,18 +35,16 @@ export async function crawl(baseUrl: string, options: CrawlOptions = {}): Promis
       visited.add(url);
       count++;
 
-      links.forEach(link => {
-
-        if (getBaseDomain(link) === baseDomain){
-
+      links.forEach((link) => {
+        if (getBaseDomain(link) === baseDomain) {
           allLinks.add(link);
         }
       });
 
       // Filtra solo i link interni
       const internalLinks = links
-        .filter(link => getBaseDomain(link) === baseDomain)
-        .filter(link => !visited.has(link));
+        .filter((link) => getBaseDomain(link) === baseDomain)
+        .filter((link) => !visited.has(link));
 
       toVisit.push(...internalLinks);
     } catch (err) {
@@ -66,7 +67,27 @@ export async function crawl(baseUrl: string, options: CrawlOptions = {}): Promis
   return result;
 }
 
-function saveLinks(result: DomainCrawlResult) {
+export function saveLinks(result: DomainCrawlResult) {
+  const folderPath = path.join("output", "pages");
+  fs.mkdirSync(folderPath, { recursive: true });
+
+  result.links.forEach((link, index) => {
+    // Usa solo l’indice come nome file
+    const fileName = `${index + 1}.md`;
+    const filePath = path.join(folderPath, fileName);
+
+    const content =
+      `# Link estratto\n` +
+      `URL: ${link}\n` +
+      //`Dominio: ${result.domain}\n` +
+      `Data: ${result.timestamp.toISOString()}\n`;
+
+    fs.writeFileSync(filePath, content, "utf-8");
+    console.log(`Salvato: ${filePath}`);
+  });
+}
+
+/*function saveLinks(result: DomainCrawlResult) {
   const fileName = `links_${new Date().toISOString().split("T")[0]}.md`;
   const filePath = path.join("output", fileName);
 
@@ -78,11 +99,7 @@ function saveLinks(result: DomainCrawlResult) {
   fs.mkdirSync("output", { recursive: true });
   fs.writeFileSync(filePath, content, "utf-8");
   console.log(`Links salvati in: ${filePath}`);
-}
-
-
-
-
+}*/
 
 /*import { extractLinksFromPage } from "./scraper";
 import fs from "fs";
