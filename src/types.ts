@@ -1,8 +1,23 @@
-export interface CrawlResult{
-  url : string;
+export interface DomainCrawlResult{
+  baseUrl : string;
+  domain : string;
   links : string[];
+  crawledPages : number;
+  timestamp : Date;
 
 }
+
+export interface CrawlOptions{
+  limit? : number; // numero massimo di pagie da visitare
+  concurrent? : number;
+  saveToFile? : boolean; 
+}
+
+export interface ScrapeResult{
+  url: string;
+  links: string [];
+}
+
 
 
 

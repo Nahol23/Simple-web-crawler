@@ -1,14 +1,29 @@
 import { crawl } from "./crawler";
 
 const baseUrl = process.argv[2] || "https://www.missoun.com/";
+const limit = parseInt(process.argv[3] || "2");
 
 (async () => {
   console.log(`Inizio crawling da: ${baseUrl}`);
-  const links = await crawl(baseUrl, 1); // limite di 1 paggina
-  console.log('Trovati ${links.length} link totali')
-  console.log("Crawling completato");
-})();
 
+  try {
+    const result = await crawl(baseUrl, {limit});
+
+    console.log("\nCrawling Completo");
+    console.log(`Link totali trovati: ${result.links.length}`);
+
+    if (result.links.length > 0) {
+      console.log("\nLink trovati:");
+      result.links.forEach((link, index) => {
+        console.log(`${index + 1}. ${link}`);
+      });
+    } else {
+      console.log("\nNessun Link trovato");
+    }
+  } catch (error) {
+    console.error("Errore durante il crawling:", error);
+  }
+})();
 
 
 

@@ -1,4 +1,90 @@
 import { extractLinksFromPage } from "./scraper";
+import { DomainCrawlResult, CrawlOptions } from "./types";
+import fs from "fs";
+import path from "path";
+
+function getBaseDomain(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+}
+
+export async function crawl(baseUrl: string, options: CrawlOptions = {}): Promise<DomainCrawlResult> {
+  const { limit = 5, saveToFile = true } = options;
+
+  const visited = new Set<string>();
+  const allLinks = new Set<string>();
+  const toVisit: string[] = [baseUrl];
+  let count = 0;
+
+  const baseDomain = getBaseDomain(baseUrl);
+
+  while (toVisit.length > 0 && count < limit) {
+    const url = toVisit.shift()!;
+    if (visited.has(url)) continue;
+
+    try {
+      console.log(`Crawling: ${url}`);
+      const links = await extractLinksFromPage(url);
+
+      visited.add(url);
+      count++;
+
+      links.forEach(link => {
+
+        if (getBaseDomain(link) === baseDomain){
+
+          allLinks.add(link);
+        }
+      });
+
+      // Filtra solo i link interni
+      const internalLinks = links
+        .filter(link => getBaseDomain(link) === baseDomain)
+        .filter(link => !visited.has(link));
+
+      toVisit.push(...internalLinks);
+    } catch (err) {
+      console.error(`Errore su ${url}:`, err);
+    }
+  }
+
+  const result: DomainCrawlResult = {
+    baseUrl,
+    domain: baseDomain,
+    links: Array.from(allLinks),
+    crawledPages: visited.size,
+    timestamp: new Date(),
+  };
+
+  if (saveToFile) {
+    saveLinks(result);
+  }
+
+  return result;
+}
+
+function saveLinks(result: DomainCrawlResult) {
+  const fileName = `links_${new Date().toISOString().split("T")[0]}.md`;
+  const filePath = path.join("output", fileName);
+
+  const content =
+    `# Links trovati da: ${result.baseUrl}\n` +
+    `# Data: ${result.timestamp.toISOString()}\n\n` +
+    result.links.map(link => `- ${link}`).join("\n");
+
+  fs.mkdirSync("output", { recursive: true });
+  fs.writeFileSync(filePath, content, "utf-8");
+  console.log(`Links salvati in: ${filePath}`);
+}
+
+
+
+
+
+/*import { extractLinksFromPage } from "./scraper";
 import fs from "fs";
 import path from "path";
 
@@ -64,4 +150,4 @@ function saveLinks(links: string[], baseUrl: string) {
   fs.mkdirSync("output", { recursive: true });
   fs.writeFileSync(filePath, content, "utf-8");
   console.log(`Links salvati in: ${filePath}`);
-}
+}*/
