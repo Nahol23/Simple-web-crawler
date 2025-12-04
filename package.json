@@ -34,7 +34,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@mendable/firecrawl-js": "^4.8.0",
-    "axios": "^1.13.2"
+    "@mendable/firecrawl-js": "^4.8.2"
   }
 }

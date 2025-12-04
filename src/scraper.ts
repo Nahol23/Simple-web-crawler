@@ -1,31 +1,22 @@
 import { Firecrawl } from "@mendable/firecrawl-js";
+import { ScrapeResult } from "./types";
 
 const app = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
-/**
- * Estrae e normalizza i link da una pagina
- */
-export async function extractLinksFromPage(url: string): Promise<string[]> {
+export async function extractPageData(url: string): Promise<ScrapeResult> {
   try {
-    const result = await app.scrape(url, { formats: ["links"] });
+    const result = await app.scrape(url, { formats: ["markdown", "links"] });
 
     const links: string[] = [];
-
-    if (result.links && Array.isArray(result.links)) {
+    if (Array.isArray(result.links)) {
       result.links.forEach((link: any) => {
         let href: string | undefined;
-
-        if (typeof link === "string") {
-          href = link;
-        } else if (link?.url) {
-          href = link.url;
-        } else if (link?.href) {
-          href = link.href;
-        }
+        if (typeof link === "string") href = link;
+        else if (link?.url) href = link.url;
+        else if (link?.href) href = link.href;
 
         if (href) {
           try {
-            // Risolve link relativi rispetto alla pagina
             const absolute = new URL(href, url).href;
             links.push(absolute);
           } catch {
@@ -35,50 +26,15 @@ export async function extractLinksFromPage(url: string): Promise<string[]> {
       });
     }
 
-    console.log(`Trovati ${links.length} link su ${url}`);
-    return links;
+    return {
+      url:String( result.metadata?.url || result.metadata?.canonical || url),
+      title: result.metadata?.title || "",
+      description: result.metadata?.description || "",
+      markdown: result.markdown || "",
+      links,
+    };
   } catch (error) {
-    console.error(`Errore nell'estrazione link da ${url}:`, error);
-    return [];
+    console.error(`Errore nell'estrazione dati da ${url}:`, error);
+    return { url, links: [] };
   }
 }
-
-
-
-
-
-
-/*
-
-/**
- * Estrae solo i link da una pagina senza processare il contenuto
-        const result = await app.scrape(url, {
-            formats: ['links'] // Richiedi solo i link
-        });
-        
-        // Estrai i link dal risultato
-        const links: string[] = [];
-        
-        if (result.links && Array.isArray(result.links)) {
-            // Itera sui link e aggiungi solo quelli validi
-            result.links.forEach((link: any) => {
-                if (link && typeof link === 'string') {
-                    links.push(link);
-                } else if (link && link.url) {
-                    links.push(link.url);
-                } else if (link && link.href) {
-                    links.push(link.href);
-                }
-            });
-        }
-        
-        console.log(`Trovati ${links.length} link su ${url}`);
-        return links;
-        
-    } catch (error) {
-        console.error(`Errore nell'estrazione link da ${url}:`, error);
-        return [];
-    }
-}
-*/
-

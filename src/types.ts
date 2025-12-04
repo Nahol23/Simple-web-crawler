@@ -1,9 +1,9 @@
 export interface DomainCrawlResult{
   baseUrl : string;
   domain : string;
-  links : string[];
   crawledPages : number;
   timestamp : Date;
+  pages: ScrapeResult[];
 
 }
 
@@ -15,8 +15,17 @@ export interface CrawlOptions{
 
 export interface ScrapeResult{
   url: string;
+  title? : string;
+  markdown? : string;
+  description?: string;
   links: string [];
+  
 }
+export type CrawlJob = {
+  id: string;
+  status: string;
+  data: ScrapeResult[]; 
+};
 
 
 

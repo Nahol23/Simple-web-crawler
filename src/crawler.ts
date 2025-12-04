@@ -1,15 +1,19 @@
-import { extractLinksFromPage } from "./scraper";
-import { DomainCrawlResult, CrawlOptions } from "./types";
+import { Firecrawl } from "@mendable/firecrawl-js";
+import { DomainCrawlResult, CrawlOptions, ScrapeResult } from "./types";
 import fs from "fs";
 import path from "path";
 
+const app = new Firecrawl({ apiKey: "fc-de89269d17cd453fb4aef87132f9d72b" });
+
 function getBaseDomain(url: string): string {
   try {
-    return new URL(url).hostname;
+    return new URL(url).hostname.replace(/\./g, "_");
   } catch {
-    return "";
+    return "unknown_domain";
   }
 }
+let lastCrawlTime = 0;
+const RATE_LIMIT_MS = 5000; // minimo 5 secondi tra un crawl e l'altro
 
 export async function crawl(
   baseUrl: string,
@@ -17,154 +21,95 @@ export async function crawl(
 ): Promise<DomainCrawlResult> {
   const { limit = 5, saveToFile = true } = options;
 
-  const visited = new Set<string>();
-  const allLinks = new Set<string>();
-  const toVisit: string[] = [baseUrl];
-  let count = 0;
-
-  const baseDomain = getBaseDomain(baseUrl);
-
-  while (toVisit.length > 0 && count < limit) {
-    const url = toVisit.shift()!;
-    if (visited.has(url)) continue;
-
-    try {
-      console.log(`Crawling: ${url}`);
-      const links = await extractLinksFromPage(url);
-
-      visited.add(url);
-      count++;
-
-      links.forEach((link) => {
-        if (getBaseDomain(link) === baseDomain) {
-          allLinks.add(link);
-        }
-      });
-
-      // Filtra solo i link interni
-      const internalLinks = links
-        .filter((link) => getBaseDomain(link) === baseDomain)
-        .filter((link) => !visited.has(link));
-
-      toVisit.push(...internalLinks);
-    } catch (err) {
-      console.error(`Errore su ${url}:`, err);
-    }
+  const now = Date.now();
+  if (now - lastCrawlTime < RATE_LIMIT_MS) {
+    const wait = RATE_LIMIT_MS - (now - lastCrawlTime);
+    console.log(` Rate limit attivo, attendo ${wait}ms prima di chiamare Firecrawl...`);
+    await new Promise(res => setTimeout(res, wait));
   }
+  lastCrawlTime = Date.now();
 
-  const result: DomainCrawlResult = {
+  console.log(` Avvio crawl con Firecrawl su: ${baseUrl}`);
+
+  const result = await app.crawl(baseUrl, { limit });
+
+  const pages: ScrapeResult[] = result.data.map((page: any, idx: number) => ({
+    url: page.url || page.metadata?.url || page.metadata?.canonical || `${baseUrl}#${idx}`,
+    title: page.metadata?.title || "",
+    description: page.metadata?.description || "",
+    markdown: page.markdown || "",
+    links: page.links || [],
+  }));
+
+  const domainResult: DomainCrawlResult = {
     baseUrl,
-    domain: baseDomain,
-    links: Array.from(allLinks),
-    crawledPages: visited.size,
+    domain: getBaseDomain(baseUrl),
+    pages,
+    crawledPages: pages.length,
     timestamp: new Date(),
   };
 
   if (saveToFile) {
-    saveLinks(result);
+    savePages(domainResult);
   }
 
-  return result;
+  return domainResult;
 }
 
-export function saveLinks(result: DomainCrawlResult) {
-  const folderPath = path.join("output", "pages");
+
+export async function generateSitemap(baseUrl: string) {
+  const sitemap = await app.map(baseUrl);
+  console.log(" Sitemap generata:", sitemap);
+  return sitemap;
+}
+export function savePages(result: DomainCrawlResult) {
+  const folderPath = path.join("output", result.domain);
   fs.mkdirSync(folderPath, { recursive: true });
 
-  result.links.forEach((link, index) => {
-    // Usa solo l’indice come nome file
-    const fileName = `${index + 1}.md`;
+  // Set per evitare duplicati
+  const seen = new Set<string>();
+
+  result.pages.forEach((page, index) => {
+    // Se manca l'URL, uso un fallback
+    const safeUrl = page.url || `url_${index}`;
+    const normalizedUrl = safeUrl.replace(/\/$/, ""); // normalizza togliendo lo slash finale
+
+    if (seen.has(normalizedUrl)) {
+      console.warn(`URL duplicato, salto: ${normalizedUrl}`);
+      return;
+    }
+    seen.add(normalizedUrl);
+
+    const safeTitle = page.title?.trim() || "Pagina senza titolo";
+    const safeDescription = page.description?.trim() || "";
+    const safeMarkdown =
+      page.markdown?.trim() || "Nessun contenuto disponibile";
+
+    // Nome file derivato dall'URL o fallback
+    const safeName = normalizedUrl.replace(/[^a-z0-9]/gi, "_").slice(0, 100);
+    const fileName = `${safeName}.md`;
     const filePath = path.join(folderPath, fileName);
 
+    // Contenuto del file
     const content =
-      `# Link estratto\n` +
-      `URL: ${link}\n` +
-      //`Dominio: ${result.domain}\n` +
-      `Data: ${result.timestamp.toISOString()}\n`;
+      `**URL:** ${safeUrl}\n\n` +
+      `# ${safeTitle}\n\n` +
+      (safeDescription ? `**Descrizione:** ${safeDescription}\n\n` : "") +
+      `**Data:** ${result.timestamp.toISOString()}\n\n` +
+      `---\n\n` +
+      safeMarkdown +
+      `\n\n---\n\n` +
+      `## Raw data\n\n` +
+      "```json\n" +
+      JSON.stringify(page, null, 2) +
+      "\n```";
 
     fs.writeFileSync(filePath, content, "utf-8");
-    console.log(`Salvato: ${filePath}`);
+    console.log(` Salvato: ${filePath}`);
   });
+
+  // Salva anche un file JSON unico con tutte le pagine
+  const allJsonPath = path.join(folderPath, "all_pages.json");
+  fs.writeFileSync(allJsonPath, JSON.stringify(result.pages, null, 2), "utf-8");
+  console.log(` Salvato dataset completo: ${allJsonPath}`);
 }
-
-/*function saveLinks(result: DomainCrawlResult) {
-  const fileName = `links_${new Date().toISOString().split("T")[0]}.md`;
-  const filePath = path.join("output", fileName);
-
-  const content =
-    `# Links trovati da: ${result.baseUrl}\n` +
-    `# Data: ${result.timestamp.toISOString()}\n\n` +
-    result.links.map(link => `- ${link}`).join("\n");
-
-  fs.mkdirSync("output", { recursive: true });
-  fs.writeFileSync(filePath, content, "utf-8");
-  console.log(`Links salvati in: ${filePath}`);
-}*/
-
-/*import { extractLinksFromPage } from "./scraper";
-import fs from "fs";
-import path from "path";
-
-function getBaseDomain(url: string): string {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname;
-  } catch (e) {
-    return "";
-  }
-}
-
-export async function crawl(baseUrl: string, limit: number = 5): Promise<string[]> {
-  const visited = new Set<string>();
-  const allLinks = new Set<string>();
-  const toVisit: string[] = [baseUrl];
-  let count = 0;
-  
-  const baseDomain = getBaseDomain(baseUrl);
-
-  while (toVisit.length > 0 && count < limit) {
-    const url = toVisit.shift()!;
-    if (visited.has(url)) continue;
-
-    
-    try {
-      console.log(`Crawling: ${url}`);
-      
-      // Estrai solo i link dalla pagina
-      const links = await extractLinksFromPage(url);
-      
-      visited.add(url);
-      count++;
-      
-      // Aggiungi tutti i link trovati
-      links.forEach(link => allLinks.add(link));
-      
-      // Filtra solo i link interni per continuare il crawling
-      const internalLinks = links
-        .filter(link => getBaseDomain(link) === baseDomain)
-        .filter(link => !visited.has(link));
-      
-      toVisit.push(...internalLinks);
-      
-    } catch (err) {
-      console.error(`Errore su ${url}:`, err);
-    }
-  }
-  
-  // Salva i link trovati in un file
-  saveLinks(Array.from(allLinks), baseUrl);
-  
-  return Array.from(allLinks);
-}
-
-function saveLinks(links: string[], baseUrl: string) {
-  const fileName = `links_${new Date().toISOString().split('T')[0]}.txt`;
-  const filePath = path.join("output", fileName);
-  
-  const content = `# Links trovati da: ${baseUrl}\n# Data: ${new Date().toISOString()}\n\n` +
-                  links.map(link => `- ${link}`).join('\n');
-  
-  fs.mkdirSync("output", { recursive: true });
-  fs.writeFileSync(filePath, content, "utf-8");
-  console.log(`Links salvati in: ${filePath}`);
-}*/
