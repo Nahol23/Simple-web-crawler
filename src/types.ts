@@ -9,7 +9,7 @@ export interface DomainCrawlResult{
 
 export interface CrawlOptions{
   limit? : number; // numero massimo di pagie da visitare
-  concurrent? : number;
+  //concurrent? : number;
   saveToFile? : boolean; 
 }
 

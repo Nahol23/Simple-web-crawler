@@ -2,8 +2,9 @@ import { Firecrawl } from "@mendable/firecrawl-js";
 import { DomainCrawlResult, CrawlOptions, ScrapeResult } from "./types";
 import fs from "fs";
 import path from "path";
+import { logError, logInfo } from './utils/logger';
 
-const app = new Firecrawl({ apiKey: "fc-de89269d17cd453fb4aef87132f9d72b" });
+const app = new Firecrawl({ apiKey: "fc-cd0f01034c5343c48998e1f663a7f00c" });
 
 function getBaseDomain(url: string): string {
   try {
@@ -24,17 +25,17 @@ export async function crawl(
   const now = Date.now();
   if (now - lastCrawlTime < RATE_LIMIT_MS) {
     const wait = RATE_LIMIT_MS - (now - lastCrawlTime);
-    console.log(` Rate limit attivo, attendo ${wait}ms prima di chiamare Firecrawl...`);
+    logInfo(` Rate limit attivo, attendo ${wait}ms prima di chiamare Firecrawl...`);
     await new Promise(res => setTimeout(res, wait));
   }
   lastCrawlTime = Date.now();
 
-  console.log(` Avvio crawl con Firecrawl su: ${baseUrl}`);
+  logInfo(` Avvio crawl con Firecrawl su: ${baseUrl}`);
 
   const result = await app.crawl(baseUrl, { limit });
 
-  const pages: ScrapeResult[] = result.data.map((page: any, idx: number) => ({
-    url: page.url || page.metadata?.url || page.metadata?.canonical || `${baseUrl}#${idx}`,
+  const pages: ScrapeResult[] = result.data.map((page: any, index: number) => ({
+    url: page.url || page.metadata?.url || page.metadata?.canonical || `${baseUrl}#${index}`,
     title: page.metadata?.title || "",
     description: page.metadata?.description || "",
     markdown: page.markdown || "",
@@ -59,7 +60,9 @@ export async function crawl(
 
 export async function generateSitemap(baseUrl: string) {
   const sitemap = await app.map(baseUrl);
-  console.log(" Sitemap generata:", sitemap);
+  logInfo(`Sitemap generata: ${JSON.stringify(sitemap, null, 2)}`);
+
+  //logInfo("Sitemap generata:" sitemap);
   return sitemap;
 }
 export function savePages(result: DomainCrawlResult) {
@@ -75,7 +78,7 @@ export function savePages(result: DomainCrawlResult) {
     const normalizedUrl = safeUrl.replace(/\/$/, ""); // normalizza togliendo lo slash finale
 
     if (seen.has(normalizedUrl)) {
-      console.warn(`URL duplicato, salto: ${normalizedUrl}`);
+      logInfo(`URL duplicato, salto: ${normalizedUrl}`);
       return;
     }
     seen.add(normalizedUrl);
@@ -105,11 +108,11 @@ export function savePages(result: DomainCrawlResult) {
       "\n```";
 
     fs.writeFileSync(filePath, content, "utf-8");
-    console.log(` Salvato: ${filePath}`);
+    logInfo(` Salvato: ${filePath}`);
   });
 
   // Salva anche un file JSON unico con tutte le pagine
   const allJsonPath = path.join(folderPath, "all_pages.json");
   fs.writeFileSync(allJsonPath, JSON.stringify(result.pages, null, 2), "utf-8");
-  console.log(` Salvato dataset completo: ${allJsonPath}`);
+  logInfo(` Salvato dataset completo: ${allJsonPath}`);
 }

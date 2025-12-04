@@ -1,10 +1,11 @@
 import { crawl, generateSitemap } from "./crawler";
+import { logError, logInfo } from "./utils/logger";
 
 const ROOT_URL = "https://www.missoun.com/";
-const LIMIT = 5;
+const LIMIT = 10 ;
 
 (async () => {
-  console.log(` Avvio crawling dalla root: ${ROOT_URL}`);
+  logInfo(` Avvio crawling dalla root: ${ROOT_URL}`);
 
   try {
     // Avvia direttamente il crawl
@@ -13,25 +14,25 @@ const LIMIT = 5;
       saveToFile: true, 
     });
 
-    console.log("\n Crawling completato");
-    console.log(`Dominio: ${result.domain}`);
-    console.log(`Pagine visitate: ${result.crawledPages}`);
+    logInfo("\n Crawling completato");
+    logInfo(`Dominio: ${result.domain}`);
+    logInfo(`Pagine visitate: ${result.crawledPages}`);
 
     if (result.pages.length > 0) {
-      console.log("\n Pagine trovate:");
+      logInfo("\n Pagine trovate:");
       result.pages.forEach((page, index) => {
-        console.log(
+        logInfo(
           `${index + 1}. ${page.title || "(senza titolo)"} → ${page.url}`
         );
       });
     } else {
-      console.log("\nNessuna pagina trovata");
+      logInfo("\nNessuna pagina trovata");
     }
 
     const sitemap = await generateSitemap(ROOT_URL);
-    console.log("\n Sitemap generata:");
-    console.log(JSON.stringify(sitemap, null, 2));
+    logInfo("\n Sitemap generata:");
+    logInfo(JSON.stringify(sitemap, null, 2));
   } catch (error) {
-    console.error(" Errore durante il crawling:", error);
+    logError(" Errore durante il crawling:", error);
   }
 })();

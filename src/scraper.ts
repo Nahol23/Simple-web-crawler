@@ -1,5 +1,6 @@
 import { Firecrawl } from "@mendable/firecrawl-js";
 import { ScrapeResult } from "./types";
+import { logError, logInfo } from "./utils/logger";
 
 const app = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY! });
 
@@ -34,7 +35,7 @@ export async function extractPageData(url: string): Promise<ScrapeResult> {
       links,
     };
   } catch (error) {
-    console.error(`Errore nell'estrazione dati da ${url}:`, error);
+    logError(`Errore nell'estrazione dati da ${url}:`, error);
     return { url, links: [] };
   }
 }

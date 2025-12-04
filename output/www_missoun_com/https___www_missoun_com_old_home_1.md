@@ -4,7 +4,7 @@
 
 **Descrizione:** The Missoun visual commerce platform helps manufacturers of complex and highly configurable products to create immersive 3D configurators that drive conversions.
 
-**Data:** 2025-12-04T11:09:13.874Z
+**Data:** 2025-12-04T14:30:06.016Z
 
 ---
 
