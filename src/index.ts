@@ -1,38 +1,27 @@
-import { crawl, generateSitemap } from "./crawler";
-import { logError, logInfo } from "./utils/logger";
+// index.ts
+import readline from "readline";
+import { crawl } from "./crawler";
+import { logInfo, logError } from "./utils/logger";
 
-const ROOT_URL = "https://www.missoun.com/";
-const LIMIT = 10 ;
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-(async () => {
-  logInfo(` Avvio crawling dalla root: ${ROOT_URL}`);
-
+rl.question("Inserisci l'URL da crawlare: ", async (url) => {
   try {
-    // Avvia direttamente il crawl
-    const result = await crawl(ROOT_URL, { 
-      limit: LIMIT, 
-      saveToFile: true, 
-    });
-
-    logInfo("\n Crawling completato");
-    logInfo(`Dominio: ${result.domain}`);
-    logInfo(`Pagine visitate: ${result.crawledPages}`);
-
-    if (result.pages.length > 0) {
-      logInfo("\n Pagine trovate:");
-      result.pages.forEach((page, index) => {
-        logInfo(
-          `${index + 1}. ${page.title || "(senza titolo)"} → ${page.url}`
-        );
-      });
-    } else {
-      logInfo("\nNessuna pagina trovata");
+    if (!url) {
+      logError("Nessun URL inserito, uscita dal programma.");
+      rl.close();
+      return;
     }
 
-    const sitemap = await generateSitemap(ROOT_URL);
-    logInfo("\n Sitemap generata:");
-    logInfo(JSON.stringify(sitemap, null, 2));
+    logInfo(`URL ricevuto: ${url}`);
+    const result = await crawl(url, { limit: 10, saveToFile: true });
+    logInfo(`Crawl completato: ${result.crawledPages} pagine trovate`);
   } catch (error) {
-    logError(" Errore durante il crawling:", error);
+    logError("Errore durante il crawl", error);
+  } finally {
+    rl.close();
   }
-})();
+});
