@@ -2,7 +2,7 @@ import { Firecrawl } from "@mendable/firecrawl-js";
 import { DomainCrawlResult, CrawlOptions, ScrapeResult } from "./types";
 import fs from "fs";
 import path from "path";
-import { logError, logInfo } from './utils/logger';
+import { logInfo } from './utils/logger';
 
 const app = new Firecrawl({ apiKey: "fc-cd0f01034c5343c48998e1f663a7f00c" });
 
