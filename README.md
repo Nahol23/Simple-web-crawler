@@ -48,7 +48,7 @@ A TypeScript-based web crawler and scraper built with Firecrawl API for extracti
 ├── scraper.ts      # Single page data extraction
 ├── index.ts        # CLI entry point
 ├── types.ts        # TypeScript interfaces
-├── utils/logger.ts # Logging utilities (not shown but assumed)
+├── utils/logger.ts # Logging utilities 
 └── output/         # Generated output folder (created automatically)
 ```
 
