@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { logInfo } from './utils/logger';
 
-const app = new Firecrawl({ apiKey: "fc-cd0f01034c5343c48998e1f663a7f00c" });
+const app = new Firecrawl({ apiKey: "Your API Key from FirecrawlApiKey" });
 
 function getBaseDomain(url: string): string {
   try {
